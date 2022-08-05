@@ -1,3 +1,13 @@
+FROM golang:1.18.5-buster AS builder
+
+WORKDIR /go/src
+
+RUN git clone https://github.com/virtual-kubelet/virtual-kubelet.git && \
+    (cd virtual-kubelet && git checkout v1.6.0 && make build)
+
+RUN git clone https://github.com/chazapis/random-scheduler.git && \
+    (cd random-scheduler && go build)
+
 FROM ubuntu:20.04
 
 RUN apt-get update && \
@@ -10,6 +20,8 @@ RUN apt-get update && \
         /usr/share/man \
         /usr/share/doc \
         /usr/share/doc-base
+
+WORKDIR /root
 
 ARG ARCH=arm64
 
@@ -28,9 +40,10 @@ RUN curl -LO https://dl.k8s.io/${KUBERNETES_VERSION}/kubernetes-server-linux-${A
     cp kubernetes/server/bin/kubectl /usr/local/bin/ && \
     rm -rf kubernetes kubernetes-server-linux-${ARCH}.tar.gz
 
+COPY --from=builder /go/src/virtual-kubelet/bin/virtual-kubelet /usr/local/bin/
+COPY --from=builder /go/src/random-scheduler/random-scheduler /usr/local/bin/
+
 COPY start.sh /root/
 COPY cfssl /root/cfssl/
-
-WORKDIR /root
 
 CMD ./start.sh

@@ -91,6 +91,31 @@ cp /etc/kubernetes/admin.kubeconfig ~/.kube/config
 # Verify with:
 # kubectl version
 
+# Start the random scheduler
+
+random-scheduler \
+  &> /var/log/kubernetes/random-scheduler.log &
+
+# Start the Virtual Kubelet
+
+cat > /etc/kubernetes/mock-config.json <<EOF
+{
+  "worker": {
+    "cpu": "2",
+    "memory": "32Gi",
+    "pods": "128"
+  }
+}
+EOF
+
+# XXX Should adjust permissions to use worker credentials...
+export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
+export APISERVER_KEY_LOCATION=/etc/kubernetes/ssl/admin-key.pem
+export APISERVER_CERT_LOCATION=/etc/kubernetes/ssl/admin.pem
+
+virtual-kubelet --disable-taint --nodename worker --provider mock --provider-config /etc/kubernetes/mock-config.json \
+  &> /var/log/kubernetes/virtual-kubelet.log &
+
 # Done
 
 sleep infinity
