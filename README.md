@@ -16,7 +16,6 @@ Use the following environment variables to customize:
 |-------------------------|--------------------------------------------|---------|
 | `HPK_BUILTIN_SCHEDULER` | Start the built-in pass-through scheduler. | `1`     |
 | `HPK_BUILTIN_KUBELET`   | Start the built-in mock kubelet.           | `1`     |
-|-------------------------|--------------------------------------------|---------|
 
 To build and push for multiple architectures:
 ```bash
