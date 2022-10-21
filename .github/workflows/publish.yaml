@@ -24,4 +24,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 --push -t chazapis/kubernetes-from-scratch:${{ github.ref }} .
+          docker buildx build --platform linux/amd64,linux/arm64 --push -t chazapis/kubernetes-from-scratch:${GITHUB_REF#refs/tags/} .
