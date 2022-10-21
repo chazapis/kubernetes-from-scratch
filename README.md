@@ -4,10 +4,23 @@ The purpose of this repository is to boostrap a very basic Kubernetes environmen
 
 Example usage:
 ```bash
-docker run -d --rm -p 6443:6443 --name k8sfs chazapis/kubernetes-from-scratch:20220806
+docker run -d --rm -p 6443:6443 --name k8sfs chazapis/kubernetes-from-scratch:<tag>
 docker cp k8sfs:/root/.kube/config kubeconfig
 export KUBECONFIG=$PWD/kubeconfig
 kubectl version
+```
+
+Use the following environment variables to customize:
+
+| Variable                | Description                                | Default |
+|-------------------------|--------------------------------------------|---------|
+| `HPK_BUILTIN_SCHEDULER` | Start the built-in pass-through scheduler. | `1`     |
+| `HPK_BUILTIN_KUBELET`   | Start the built-in mock kubelet.           | `1`     |
+|-------------------------|--------------------------------------------|---------|
+
+To build and push for multiple architectures:
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 --push -t chazapis/kubernetes-from-scratch:<tag> .
 ```
 
 Based on the excellent [Kubernetes The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) and [Kubernetes Deployment From Scratch - The Ultimate Guide](https://www.ulam.io/blog/kubernetes-scratch).

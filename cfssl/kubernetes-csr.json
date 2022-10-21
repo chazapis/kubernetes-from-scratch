@@ -6,11 +6,8 @@
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
       "O": "Kubernetes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "OU": "HPK"
     }
   ]
 }

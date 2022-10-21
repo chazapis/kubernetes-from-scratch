@@ -1,4 +1,4 @@
-FROM golang:1.18.5-buster AS builder
+FROM golang:1.18.7 AS builder
 
 WORKDIR /go/src
 
@@ -45,5 +45,8 @@ COPY --from=builder /go/src/random-scheduler/random-scheduler /usr/local/bin/
 
 COPY start.sh /root/
 COPY cfssl /root/cfssl/
+
+ENV HPK_BUILTIN_SCHEDULER=1
+ENV HPK_BUILTIN_KUBELET=1
 
 CMD ./start.sh

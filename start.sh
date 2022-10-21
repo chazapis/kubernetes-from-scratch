@@ -93,12 +93,15 @@ cp /etc/kubernetes/admin.kubeconfig ~/.kube/config
 
 # Start the random scheduler
 
-random-scheduler \
-  &> /var/log/kubernetes/random-scheduler.log &
+if [ "$HPK_BUILTIN_SCHEDULER" == "1" ]; then
+  random-scheduler \
+    &> /var/log/kubernetes/random-scheduler.log &
+fi
 
 # Start the Virtual Kubelet
 
-cat > /etc/kubernetes/mock-config.json <<EOF
+if [ "$HPK_BUILTIN_KUBELET" == "1" ]; then
+    cat > /etc/kubernetes/mock-config.json <<EOF
 {
   "worker": {
     "cpu": "2",
@@ -108,13 +111,14 @@ cat > /etc/kubernetes/mock-config.json <<EOF
 }
 EOF
 
-# XXX Should adjust permissions to use worker credentials...
-export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
-export APISERVER_KEY_LOCATION=/etc/kubernetes/ssl/admin-key.pem
-export APISERVER_CERT_LOCATION=/etc/kubernetes/ssl/admin.pem
+    # XXX Should adjust permissions to use worker credentials...
+    export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
+    export APISERVER_KEY_LOCATION=/etc/kubernetes/ssl/admin-key.pem
+    export APISERVER_CERT_LOCATION=/etc/kubernetes/ssl/admin.pem
 
-virtual-kubelet --disable-taint --nodename worker --provider mock --provider-config /etc/kubernetes/mock-config.json \
-  &> /var/log/kubernetes/virtual-kubelet.log &
+    virtual-kubelet --disable-taint --nodename worker --provider mock --provider-config /etc/kubernetes/mock-config.json \
+      &> /var/log/kubernetes/virtual-kubelet.log &
+fi
 
 # Done
 
