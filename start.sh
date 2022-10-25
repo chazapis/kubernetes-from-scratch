@@ -2,8 +2,7 @@
 
 (cd cfssl && ./generate.sh)
 
-# Generating the Data Encryption Config and Key
-
+# Generate the Data Encryption Config and Key
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
 mkdir -p /etc/kubernetes
 cat > /etc/kubernetes/encryption-config.yaml <<EOF
@@ -20,12 +19,10 @@ resources:
       - identity: {}
 EOF
 
-# Bootstrapping etcd
-
+# Bootstrap etcd
 export ETCD_UNSUPPORTED_ARCH=arm64
 mkdir -p /var/lib/kubernetes/etcd
 mkdir -p /var/log/kubernetes
-
 etcd \
   --cert-file=/etc/kubernetes/ssl/kubernetes.pem \
   --key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
@@ -36,17 +33,8 @@ etcd \
   --data-dir=/var/lib/kubernetes/etcd \
   &> /var/log/kubernetes/etcd.log &
 
-# Verify with:
-# etcdctl member list \
-#   --endpoints=https://127.0.0.1:2379 \
-#   --cacert=/etc/kubernetes/ssl/ca.pem \
-#   --cert=/etc/kubernetes/ssl/kubernetes.pem \
-#   --key=/etc/kubernetes/ssl/kubernetes-key.pem
-
-# Bootstrapping the Kubernetes Control Plane
-
+# Bootstrap the Kubernetes Control Plane
 KUBERNETES_PUBLIC_ADDRESS=127.0.0.1
-
 kube-apiserver \
   --allow-privileged=true \
   --authorization-mode=Node,RBAC \
@@ -70,7 +58,6 @@ kube-apiserver \
   --tls-cert-file=/etc/kubernetes/ssl/kubernetes.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
   &> /var/log/kubernetes/kube-apiserver.log &
-
 kube-controller-manager \
   --bind-address=0.0.0.0 \
   --cluster-cidr=10.200.0.0/16 \
@@ -84,30 +71,64 @@ kube-controller-manager \
   --use-service-account-credentials=true \
   &> /var/log/kubernetes/kube-controller-manager.log &
 
-# Configuring kubectl
-
+# Configure kubectl
 mkdir -p ~/.kube
 cp /etc/kubernetes/admin.kubeconfig ~/.kube/config
-# Verify with:
-# kubectl version
+while ! kubectl version; do sleep 1; done
+
+# Deploy the DNS service
+mkdir -p /etc/coredns
+cat > /etc/coredns/Corefile <<EOF
+.:53 {
+    errors
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+        endpoint 127.0.0.1:6443
+        kubeconfig /root/.kube/config
+        pods insecure
+        fallthrough in-addr.arpa ip6.arpa
+        ttl 5
+    }
+    forward . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}
+EOF
+coredns -conf /etc/coredns/Corefile \
+  &> /var/log/kubernetes/coredns.log &
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+spec:
+  clusterIP: 10.32.0.10
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+EOF
 
 # Start the random scheduler
-
 if [ "$HPK_BUILTIN_SCHEDULER" == "1" ]; then
   random-scheduler \
     &> /var/log/kubernetes/random-scheduler.log &
 fi
 
 # Start the Virtual Kubelet
-
 if [ "$HPK_BUILTIN_KUBELET" == "1" ]; then
     cat > /etc/kubernetes/mock-config.json <<EOF
 {
-  "worker": {
-    "cpu": "2",
-    "memory": "32Gi",
-    "pods": "128"
-  }
+    "worker": {
+        "cpu": "2",
+        "memory": "32Gi",
+        "pods": "128"
+    }
 }
 EOF
 
@@ -121,5 +142,4 @@ EOF
 fi
 
 # Done
-
 sleep infinity
