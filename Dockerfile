@@ -25,14 +25,14 @@ WORKDIR /root
 
 ARG ARCH=arm64
 
-ARG ETCD_VERSION=3.4.19
+ARG ETCD_VERSION=3.4.21
 RUN curl -LO https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz  && \
     tar -zxvf etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz && \
     cp etcd-v${ETCD_VERSION}-linux-${ARCH}/etcd /usr/local/bin/ && \
     cp etcd-v${ETCD_VERSION}-linux-${ARCH}/etcdctl /usr/local/bin/ && \
     rm -rf etcd-v${ETCD_VERSION}-linux-${ARCH} etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz
 
-ARG KUBERNETES_VERSION=1.22.12
+ARG KUBERNETES_VERSION=1.22.15
 RUN curl -LO https://dl.k8s.io/v${KUBERNETES_VERSION}/kubernetes-server-linux-${ARCH}.tar.gz && \
     tar -zxvf kubernetes-server-linux-${ARCH}.tar.gz && \
     cp kubernetes/server/bin/kube-apiserver /usr/local/bin/ && \
