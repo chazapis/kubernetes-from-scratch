@@ -34,8 +34,9 @@ etcd \
   &> /var/log/kubernetes/etcd.log &
 
 # Bootstrap the Kubernetes Control Plane
-KUBERNETES_PUBLIC_ADDRESS=127.0.0.1
+IP_ADDRESS=`hostname -i`
 kube-apiserver \
+  --advertise-address=${IP_ADDRESS} \
   --allow-privileged=true \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
@@ -52,7 +53,7 @@ kube-apiserver \
   --runtime-config='api/all=true' \
   --service-account-key-file=/etc/kubernetes/ssl/service-account.pem \
   --service-account-signing-key-file=/etc/kubernetes/ssl/service-account-key.pem \
-  --service-account-issuer=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
+  --service-account-issuer=https://${IP_ADDRESS}:6443 \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=/etc/kubernetes/ssl/kubernetes.pem \
@@ -60,7 +61,6 @@ kube-apiserver \
   &> /var/log/kubernetes/kube-apiserver.log &
 kube-controller-manager \
   --bind-address=0.0.0.0 \
-  --cluster-cidr=10.200.0.0/16 \
   --cluster-name=kubernetes \
   --cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem \
   --cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem \
@@ -104,7 +104,24 @@ metadata:
   name: kube-dns
   namespace: kube-system
 spec:
-  clusterIP: 10.32.0.10
+  clusterIP: None
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: kube-dns
+  namespace: kube-system
+subsets:
+- addresses:
+  - ip: ${IP_ADDRESS}
+    nodeName: k8s-control
   ports:
   - name: dns
     port: 53
