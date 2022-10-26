@@ -52,7 +52,7 @@ COPY --from=builder /go/src/virtual-kubelet/bin/virtual-kubelet /usr/local/bin/
 COPY start.sh /root/
 COPY cfssl /root/cfssl/
 
-ENV HPK_BUILTIN_SCHEDULER=1
-ENV HPK_BUILTIN_KUBELET=1
+ENV K8SFS_BUILTIN_SCHEDULER=1
+ENV K8SFS_BUILTIN_KUBELET=1
 
 CMD ./start.sh

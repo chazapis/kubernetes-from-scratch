@@ -115,13 +115,13 @@ spec:
 EOF
 
 # Start the random scheduler
-if [ "$HPK_BUILTIN_SCHEDULER" == "1" ]; then
+if [ "$K8SFS_BUILTIN_SCHEDULER" == "1" ]; then
   random-scheduler \
     &> /var/log/kubernetes/random-scheduler.log &
 fi
 
 # Start the Virtual Kubelet
-if [ "$HPK_BUILTIN_KUBELET" == "1" ]; then
+if [ "$K8SFS_BUILTIN_KUBELET" == "1" ]; then
     cat > /etc/kubernetes/mock-config.json <<EOF
 {
     "worker": {
