@@ -1,6 +1,6 @@
 # Kubernetes from scratch
 
-The purpose of this repository is to boostrap a very basic Kubernetes environment for experimenting with custom Kubernetes components, especially [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) implementations. Pre-built container images are [available](https://hub.docker.com/r/chazapis/kubernetes-from-scratch) (note the architecture).
+The purpose of this repository is to boostrap a very basic Kubernetes environment for experimenting with custom Kubernetes components, especially [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) implementations. Pre-built container images are [available](https://hub.docker.com/r/chazapis/kubernetes-from-scratch).
 
 Example usage:
 ```bash
