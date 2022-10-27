@@ -10,12 +10,11 @@ export KUBECONFIG=$PWD/kubeconfig
 kubectl version
 ```
 
-Use the following environment variables to customize:
-
-| Variable                  | Description                                | Default |
-|---------------------------|--------------------------------------------|---------|
-| `K8SFS_BUILTIN_SCHEDULER` | Start the built-in pass-through scheduler. | `1`     |
-| `K8SFS_BUILTIN_KUBELET`   | Start the built-in mock kubelet.           | `1`     |
+| Variable                  | Description                                      | Default |
+|---------------------------|--------------------------------------------------|---------|
+| `K8SFS_HEADLESS_SERVICES` | Start the webhook to make all services headless. | `1`     |
+| `K8SFS_RANDOM_SCHEDULER`  | Start the random (pass-through) scheduler.       | `1`     |
+| `K8SFS_MOCK_KUBELET`      | Start the mock kubelet.                          | `1`     |
 
 To build and push for multiple architectures:
 ```bash

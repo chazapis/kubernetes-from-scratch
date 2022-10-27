@@ -7,7 +7,7 @@
   "names": [
     {
       "O": "system:kube-controller-manager",
-      "OU": "HPK"
+      "OU": "K8SFS"
     }
   ]
 }

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+export IP_ADDRESS=`hostname -i`
 (cd cfssl && ./generate.sh)
 
 # Generate the Data Encryption Config and Key
@@ -48,7 +49,6 @@ etcd \
   &> /var/log/kubernetes/etcd.log &
 
 # Bootstrap the Kubernetes Control Plane
-IP_ADDRESS=`hostname -i`
 kube-apiserver \
   --advertise-address=${IP_ADDRESS} \
   --allow-privileged=true \
@@ -145,14 +145,45 @@ subsets:
     protocol: TCP
 EOF
 
+# Start the services webhook
+if [ "$K8SFS_HEADLESS_SERVICES" == "1" ]; then
+    CA_BUNDLE=$(cat /etc/kubernetes/ssl/ca.pem | base64 | tr -d '\n')
+    cat <<EOF | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: services-webhook
+  namespace: default
+webhooks:
+  - name: services-webhook.default.svc
+    clientConfig:
+      url: "https://127.0.0.1:8443/mutate"
+      caBundle: ${CA_BUNDLE}
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["services"]
+        scope: "*"
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+EOF
+
+    services-webhook \
+      -tlsCertFile /etc/kubernetes/ssl/kubernetes.pem \
+      -tlsKeyFile /etc/kubernetes/ssl/kubernetes-key.pem \
+      &> /var/log/kubernetes/services-webhook.log &
+fi
+
 # Start the random scheduler
-if [ "$K8SFS_BUILTIN_SCHEDULER" == "1" ]; then
-  random-scheduler \
-    &> /var/log/kubernetes/random-scheduler.log &
+if [ "$K8SFS_RANDOM_SCHEDULER" == "1" ]; then
+    random-scheduler \
+      &> /var/log/kubernetes/random-scheduler.log &
 fi
 
 # Start the Virtual Kubelet
-if [ "$K8SFS_BUILTIN_KUBELET" == "1" ]; then
+if [ "$K8SFS_MOCK_KUBELET" == "1" ]; then
     cat > /etc/kubernetes/mock-config.json <<EOF
 {
     "worker": {
@@ -168,7 +199,11 @@ EOF
     export APISERVER_KEY_LOCATION=/etc/kubernetes/ssl/admin-key.pem
     export APISERVER_CERT_LOCATION=/etc/kubernetes/ssl/admin.pem
 
-    virtual-kubelet --disable-taint --nodename worker --provider mock --provider-config /etc/kubernetes/mock-config.json \
+    virtual-kubelet \
+      --disable-taint \
+      --nodename worker \
+      --provider mock \
+      --provider-config /etc/kubernetes/mock-config.json \
       &> /var/log/kubernetes/virtual-kubelet.log &
 fi
 

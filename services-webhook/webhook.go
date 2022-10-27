@@ -35,14 +35,8 @@ var (
 )
 
 type WebhookServer struct {
-    // sidecarConfig *Config
     server        *http.Server
 }
-
-// type Config struct {
-//     Containers []corev1.Container `yaml:"containers"`
-//     Volumes    []corev1.Volume    `yaml:"volumes"`
-// }
 
 type patchOperation struct {
     Op    string      `json:"op"`
@@ -50,47 +44,40 @@ type patchOperation struct {
     Value interface{} `json:"value,omitempty"`
 }
 
-// func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
-//     for key, value := range added {
-//         if target == nil || target[key] == "" {
-//             target = map[string]string{}
-//             patch = append(patch, patchOperation{
-//                 Op:   "add",
-//                 Path: "/metadata/annotations",
-//                 Value: map[string]string{
-//                     key: value,
-//                 },
-//             })
-//         } else {
-//             patch = append(patch, patchOperation{
-//                 Op:    "replace",
-//                 Path:  "/metadata/annotations/" + key,
-//                 Value: value,
-//             })
-//         }
-//     }
-//     return patch
-// }
-
-// Check whether the target resoured need to be mutated
-func mutationRequired(metadata *metav1.ObjectMeta) bool {
-    return false
+func updateClusterIP(target *corev1.ServiceSpec) (patch []patchOperation) {
+    if target.Type == "ExternalName" {
+        return patch
+    }
+    if target.ClusterIP != "None" {
+        patch = append(patch, patchOperation{
+            Op:    "replace",
+            Path:  "/spec/clusterIP",
+            Value: "None",
+        })
+    } else {
+        patch = append(patch, patchOperation{
+            Op:   "add",
+            Path: "/spec/clusterIP",
+            Value: "None",
+        })
+    }
+    return patch
 }
 
-// Create mutation patch for resoures
-// func createPatch(pod *corev1.Pod, sidecarConfig *Config, annotations map[string]string) ([]byte, error) {
-//     var patch []patchOperation
+// Create mutation patch for resources
+func createPatch(service *corev1.Service) ([]byte, error) {
+    var patch []patchOperation
 
-//     patch = append(patch, updateAnnotation(pod.Annotations, annotations)...)
+    patch = append(patch, updateClusterIP(&service.Spec)...)
 
-//     return json.Marshal(patch)
-// }
+    return json.Marshal(patch)
+}
 
 // Main mutation process
 func (whsvr *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
     req := ar.Request
-    var pod corev1.Pod
-    if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+    var service corev1.Service
+    if err := json.Unmarshal(req.Object.Raw, &service); err != nil {
         warningLogger.Printf("Could not unmarshal raw object: %v", err)
         return &admissionv1.AdmissionResponse{
             Result: &metav1.Status{
@@ -100,39 +87,26 @@ func (whsvr *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1
     }
 
     infoLogger.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v patchOperation=%v UserInfo=%v",
-        req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
+        req.Kind, req.Namespace, req.Name, service.Name, req.UID, req.Operation, req.UserInfo)
 
-    // determine whether to perform mutation
-    if !mutationRequired(&pod.ObjectMeta) {
-        infoLogger.Printf("Skipping mutation for %s/%s due to policy check", pod.Namespace, pod.Name)
+    patchBytes, err := createPatch(&service)
+    if err != nil {
         return &admissionv1.AdmissionResponse{
-            Allowed: true,
+            Result: &metav1.Status{
+                Message: err.Error(),
+            },
         }
     }
 
+    infoLogger.Printf("AdmissionResponse: patch=%v\n", string(patchBytes))
     return &admissionv1.AdmissionResponse{
         Allowed: true,
+        Patch:   patchBytes,
+        PatchType: func() *admissionv1.PatchType {
+            pt := admissionv1.PatchTypeJSONPatch
+            return &pt
+        }(),
     }
-
-    // annotations := map[string]string{admissionWebhookAnnotationStatusKey: "injected"}
-    // patchBytes, err := createPatch(&pod, whsvr.sidecarConfig, annotations)
-    // if err != nil {
-    //     return &admissionv1.AdmissionResponse{
-    //         Result: &metav1.Status{
-    //             Message: err.Error(),
-    //         },
-    //     }
-    // }
-
-    // infoLogger.Printf("AdmissionResponse: patch=%v\n", string(patchBytes))
-    // return &admissionv1.AdmissionResponse{
-    //     Allowed: true,
-    //     Patch:   patchBytes,
-    //     PatchType: func() *admissionv1.PatchType {
-    //         pt := admissionv1.PatchTypeJSONPatch
-    //         return &pt
-    //     }(),
-    // }
 }
 
 // Serve method for webhook server
@@ -149,7 +123,7 @@ func (whsvr *WebhookServer) serve(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // verify the content type is accurate
+    // Verify the content type is accurate
     contentType := r.Header.Get("Content-Type")
     if contentType != "application/json" {
         warningLogger.Printf("Content-Type=%s, expect application/json", contentType)
@@ -188,7 +162,7 @@ func (whsvr *WebhookServer) serve(w http.ResponseWriter, r *http.Request) {
         warningLogger.Printf("Can't encode response: %v", err)
         http.Error(w, fmt.Sprintf("could not encode response: %v", err), http.StatusInternalServerError)
     }
-    infoLogger.Printf("Ready to write reponse ...")
+    infoLogger.Printf("Writing reponse...")
     if _, err := w.Write(resp); err != nil {
         warningLogger.Printf("Can't write response: %v", err)
         http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)

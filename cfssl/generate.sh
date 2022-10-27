@@ -31,13 +31,6 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
-  kube-proxy-csr.json | cfssljson -bare kube-proxy
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
   kube-scheduler-csr.json | cfssljson -bare kube-scheduler
 
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
@@ -59,7 +52,7 @@ cfssl gencert \
 # Generating Kubernetes Configuration Files for Authentication
 
 KUBERNETES_CLUSTER_NAME=kubernetes-local
-KUBERNETES_PUBLIC_ADDRESS=127.0.0.1
+KUBERNETES_PUBLIC_ADDRESS=${IP_ADDRESS:-127.0.0.1}
 
 kubectl config set-cluster ${KUBERNETES_CLUSTER_NAME} \
   --certificate-authority=ca.pem \
@@ -76,22 +69,6 @@ kubectl config set-context default \
   --user=system:node:worker \
   --kubeconfig=worker.kubeconfig
 kubectl config use-context default --kubeconfig=worker.kubeconfig
-
-kubectl config set-cluster ${KUBERNETES_CLUSTER_NAME} \
-  --certificate-authority=ca.pem \
-  --embed-certs=true \
-  --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
-  --kubeconfig=kube-proxy.kubeconfig
-kubectl config set-credentials system:kube-proxy \
-  --client-certificate=kube-proxy.pem \
-  --client-key=kube-proxy-key.pem \
-  --embed-certs=true \
-  --kubeconfig=kube-proxy.kubeconfig
-kubectl config set-context default \
-  --cluster=${KUBERNETES_CLUSTER_NAME} \
-  --user=system:kube-proxy \
-  --kubeconfig=kube-proxy.kubeconfig
-kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 
 kubectl config set-cluster ${KUBERNETES_CLUSTER_NAME} \
   --certificate-authority=ca.pem \

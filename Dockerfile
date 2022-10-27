@@ -2,6 +2,9 @@ FROM golang:1.18.7 AS builder
 
 WORKDIR /go/src
 
+COPY services-webhook /go/src/services-webhook
+RUN (cd services-webhook && go build)
+
 RUN git clone https://github.com/chazapis/random-scheduler.git && \
     (cd random-scheduler && go build)
 
@@ -46,13 +49,15 @@ RUN curl -LO https://github.com/coredns/coredns/releases/download/v${COREDNS_VER
     cp coredns /usr/local/bin/ && \
     rm -rf coredns coredns_${COREDNS_VERSION}_linux_${ARCH}.tgz
 
+COPY --from=builder /go/src/services-webhook/services-webhook /usr/local/bin/
 COPY --from=builder /go/src/random-scheduler/random-scheduler /usr/local/bin/
 COPY --from=builder /go/src/virtual-kubelet/bin/virtual-kubelet /usr/local/bin/
 
 COPY start.sh /root/
-COPY cfssl /root/cfssl/
+COPY cfssl /root/cfssl
 
-ENV K8SFS_BUILTIN_SCHEDULER=1
-ENV K8SFS_BUILTIN_KUBELET=1
+ENV K8SFS_HEADLESS_SERVICES=1
+ENV K8SFS_RANDOM_SCHEDULER=1
+ENV K8SFS_MOCK_KUBELET=1
 
 CMD ./start.sh

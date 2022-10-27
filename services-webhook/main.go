@@ -47,11 +47,11 @@ func init() {
 func main() {
     var port        int    // webhook server port
     var certFile    string // path to the x509 certificate for https
-    var keyFile     string // path to the x509 private key matching `CertFile`
+    var keyFile     string // path to the x509 private key matching `certFile`
 
     // Init command flags
     flag.IntVar(&port, "port", 8443, "Webhook server port.")
-    flag.StringVar(&certFile, "tlsCertFile", "/etc/webhook/certs/cert.pem", "x509 Certificate file.")
+    flag.StringVar(&certFile, "tlsCertFile", "/etc/webhook/certs/cert.pem", "x509 certificate file.")
     flag.StringVar(&keyFile, "tlsKeyFile", "/etc/webhook/certs/key.pem", "x509 private key file.")
     flag.Parse()
 
@@ -84,6 +84,6 @@ func main() {
     signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
     <-signalChan
 
-    infoLogger.Printf("Got OS shutdown signal, shutting down webhook server gracefully...")
+    infoLogger.Printf("Got shutdown signal, shutting down webhook server gracefully...")
     whsvr.server.Shutdown(context.Background())
 }
