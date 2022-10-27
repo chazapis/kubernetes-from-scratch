@@ -5,8 +5,8 @@ WORKDIR /go/src
 COPY services-webhook /go/src/services-webhook
 RUN (cd services-webhook && go build)
 
-RUN git clone https://github.com/chazapis/random-scheduler.git && \
-    (cd random-scheduler && go build)
+COPY random-scheduler /go/src/random-scheduler
+RUN (cd random-scheduler && go build)
 
 RUN git clone https://github.com/virtual-kubelet/virtual-kubelet.git && \
     (cd virtual-kubelet && git checkout v1.6.0 && make build)
