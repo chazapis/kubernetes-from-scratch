@@ -28,14 +28,14 @@ WORKDIR /root
 
 ARG ARCH=arm64
 
-ARG ETCD_VERSION=3.4.21
+ARG ETCD_VERSION=3.5.5
 RUN curl -LO https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz  && \
     tar -zxvf etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz && \
     cp etcd-v${ETCD_VERSION}-linux-${ARCH}/etcd /usr/local/bin/ && \
     cp etcd-v${ETCD_VERSION}-linux-${ARCH}/etcdctl /usr/local/bin/ && \
     rm -rf etcd-v${ETCD_VERSION}-linux-${ARCH} etcd-v${ETCD_VERSION}-linux-${ARCH}.tar.gz
 
-ARG KUBERNETES_VERSION=1.22.15
+ARG KUBERNETES_VERSION=1.24.7
 RUN curl -LO https://dl.k8s.io/v${KUBERNETES_VERSION}/kubernetes-server-linux-${ARCH}.tar.gz && \
     tar -zxvf kubernetes-server-linux-${ARCH}.tar.gz && \
     cp kubernetes/server/bin/kube-apiserver /usr/local/bin/ && \
@@ -43,7 +43,7 @@ RUN curl -LO https://dl.k8s.io/v${KUBERNETES_VERSION}/kubernetes-server-linux-${
     cp kubernetes/server/bin/kubectl /usr/local/bin/ && \
     rm -rf kubernetes kubernetes-server-linux-${ARCH}.tar.gz
 
-ARG COREDNS_VERSION=1.8.7
+ARG COREDNS_VERSION=1.10.0
 RUN curl -LO https://github.com/coredns/coredns/releases/download/v${COREDNS_VERSION}/coredns_${COREDNS_VERSION}_linux_${ARCH}.tgz && \
     tar -zxvf coredns_${COREDNS_VERSION}_linux_${ARCH}.tgz && \
     cp coredns /usr/local/bin/ && \

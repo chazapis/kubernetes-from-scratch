@@ -46,7 +46,6 @@ resources:
 EOF
 
 # Bootstrap etcd
-export ETCD_UNSUPPORTED_ARCH=arm64
 mkdir -p ${K8SFS_DATA_DIR}
 chmod 700 ${K8SFS_DATA_DIR}
 mkdir -p ${K8SFS_LOG_DIR}
