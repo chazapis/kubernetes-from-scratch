@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Copyright © 2022 Antony Chazapis
+# Copyright © 2016 Kelsey Hightower
+#
+# This work is licensed under a Creative Commons
+# Attribution-NonCommercial-ShareAlike 4.0 International License.
+# https://creativecommons.org/licenses/by-nc-sa/4.0/
+
 # Provisioning a CA and Generating TLS Certificates
 
 cfssl gencert -initca ca-csr.json | cfssljson -bare ca
@@ -94,8 +101,3 @@ kubectl config set-context default \
   --user=admin \
   --kubeconfig=admin.kubeconfig
 kubectl config use-context default --kubeconfig=admin.kubeconfig
-
-mkdir -p /etc/kubernetes/ssl
-mv *.pem /etc/kubernetes/ssl/
-mv *.kubeconfig /etc/kubernetes/
-rm *.csr

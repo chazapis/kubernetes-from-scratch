@@ -14,13 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export IP_ADDRESS=`hostname -i`
-(cd cfssl && ./generate.sh)
+K8SFS_CFSSL_DIR=/var/local/kubernetes/cfssl
+K8SFS_CONF_DIR=/usr/local/etc/kubernetes
+K8SFS_DATA_DIR=/var/lib/kubernetes/etcd
+K8SFS_LOG_DIR=/var/log/kubernetes
 
-# Generate the Data Encryption Config and Key
+# Generate necessary keys
+export IP_ADDRESS=`hostname -i`
+(cd ${K8SFS_CFSSL_DIR} && ./generate.sh)
+mkdir -p ${K8SFS_CONF_DIR}/ssl
+(cd ${K8SFS_CFSSL_DIR} && \
+  mv *.pem ${K8SFS_CONF_DIR}/ssl/ && \
+  mv *.kubeconfig ${K8SFS_CONF_DIR} && \
+  rm *.csr)
+
+# Generate the data encryption config and key
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
-mkdir -p /etc/kubernetes
-cat > /etc/kubernetes/encryption-config.yaml <<EOF
+mkdir -p ${K8SFS_CONF_DIR}
+cat > ${K8SFS_CONF_DIR}/encryption-config.yaml <<EOF
 kind: EncryptionConfig
 apiVersion: v1
 resources:
@@ -36,58 +47,59 @@ EOF
 
 # Bootstrap etcd
 export ETCD_UNSUPPORTED_ARCH=arm64
-mkdir -p /var/lib/kubernetes/etcd
-mkdir -p /var/log/kubernetes
+mkdir -p ${K8SFS_DATA_DIR}
+chmod 700 ${K8SFS_DATA_DIR}
+mkdir -p ${K8SFS_LOG_DIR}
 etcd \
-  --cert-file=/etc/kubernetes/ssl/kubernetes.pem \
-  --key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
-  --trusted-ca-file=/etc/kubernetes/ssl/ca.pem \
+  --cert-file=${K8SFS_CONF_DIR}/ssl/kubernetes.pem \
+  --key-file=${K8SFS_CONF_DIR}/ssl/kubernetes-key.pem \
+  --trusted-ca-file=${K8SFS_CONF_DIR}/ssl/ca.pem \
   --client-cert-auth \
   --listen-client-urls https://127.0.0.1:2379 \
   --advertise-client-urls https://127.0.0.1:2379 \
-  --data-dir=/var/lib/kubernetes/etcd \
-  &> /var/log/kubernetes/etcd.log &
+  --data-dir=${K8SFS_DATA_DIR} \
+  &> ${K8SFS_LOG_DIR}/etcd.log &
 
-# Bootstrap the Kubernetes Control Plane
+# Bootstrap the Kubernetes control plane
 kube-apiserver \
   --advertise-address=${IP_ADDRESS} \
   --allow-privileged=true \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
-  --client-ca-file=/etc/kubernetes/ssl/ca.pem \
+  --client-ca-file=${K8SFS_CONF_DIR}/ssl/ca.pem \
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
-  --etcd-cafile=/etc/kubernetes/ssl/ca.pem \
-  --etcd-certfile=/etc/kubernetes/ssl/kubernetes.pem \
-  --etcd-keyfile=/etc/kubernetes/ssl/kubernetes-key.pem \
+  --etcd-cafile=${K8SFS_CONF_DIR}/ssl/ca.pem \
+  --etcd-certfile=${K8SFS_CONF_DIR}/ssl/kubernetes.pem \
+  --etcd-keyfile=${K8SFS_CONF_DIR}/ssl/kubernetes-key.pem \
   --etcd-servers=https://127.0.0.1:2379 \
-  --encryption-provider-config=/etc/kubernetes/encryption-config.yaml \
-  --kubelet-certificate-authority=/etc/kubernetes/ssl/ca.pem \
-  --kubelet-client-certificate=/etc/kubernetes/ssl/kubernetes.pem \
-  --kubelet-client-key=/etc/kubernetes/ssl/kubernetes-key.pem \
+  --encryption-provider-config=${K8SFS_CONF_DIR}/encryption-config.yaml \
+  --kubelet-certificate-authority=${K8SFS_CONF_DIR}/ssl/ca.pem \
+  --kubelet-client-certificate=${K8SFS_CONF_DIR}/ssl/kubernetes.pem \
+  --kubelet-client-key=${K8SFS_CONF_DIR}/ssl/kubernetes-key.pem \
   --runtime-config='api/all=true' \
-  --service-account-key-file=/etc/kubernetes/ssl/service-account.pem \
-  --service-account-signing-key-file=/etc/kubernetes/ssl/service-account-key.pem \
+  --service-account-key-file=${K8SFS_CONF_DIR}/ssl/service-account.pem \
+  --service-account-signing-key-file=${K8SFS_CONF_DIR}/ssl/service-account-key.pem \
   --service-account-issuer=https://${IP_ADDRESS}:6443 \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
-  --tls-cert-file=/etc/kubernetes/ssl/kubernetes.pem \
-  --tls-private-key-file=/etc/kubernetes/ssl/kubernetes-key.pem \
-  &> /var/log/kubernetes/kube-apiserver.log &
+  --tls-cert-file=${K8SFS_CONF_DIR}/ssl/kubernetes.pem \
+  --tls-private-key-file=${K8SFS_CONF_DIR}/ssl/kubernetes-key.pem \
+  &> ${K8SFS_LOG_DIR}/kube-apiserver.log &
 kube-controller-manager \
   --bind-address=0.0.0.0 \
   --cluster-name=kubernetes \
-  --cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem \
-  --cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem \
-  --kubeconfig=/etc/kubernetes/kube-controller-manager.kubeconfig \
-  --root-ca-file=/etc/kubernetes/ssl/ca.pem \
-  --service-account-private-key-file=/etc/kubernetes/ssl/service-account-key.pem \
+  --cluster-signing-cert-file=${K8SFS_CONF_DIR}/ssl/ca.pem \
+  --cluster-signing-key-file=${K8SFS_CONF_DIR}/ssl/ca-key.pem \
+  --kubeconfig=${K8SFS_CONF_DIR}/kube-controller-manager.kubeconfig \
+  --root-ca-file=${K8SFS_CONF_DIR}/ssl/ca.pem \
+  --service-account-private-key-file=${K8SFS_CONF_DIR}/ssl/service-account-key.pem \
   --service-cluster-ip-range=10.32.0.0/24 \
   --use-service-account-credentials=true \
-  &> /var/log/kubernetes/kube-controller-manager.log &
+  &> ${K8SFS_LOG_DIR}/kube-controller-manager.log &
 
 # Configure kubectl
 mkdir -p ~/.kube
-cp /etc/kubernetes/admin.kubeconfig ~/.kube/config
+cp ${K8SFS_CONF_DIR}/admin.kubeconfig ~/.kube/config
 while ! kubectl version; do sleep 1; done
 
 # Deploy the DNS service
@@ -110,7 +122,7 @@ cat > /etc/coredns/Corefile <<EOF
 }
 EOF
 coredns -conf /etc/coredns/Corefile \
-  &> /var/log/kubernetes/coredns.log &
+  &> ${K8SFS_LOG_DIR}/coredns.log &
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Service
@@ -147,7 +159,7 @@ EOF
 
 # Start the services webhook
 if [ "$K8SFS_HEADLESS_SERVICES" == "1" ]; then
-    CA_BUNDLE=$(cat /etc/kubernetes/ssl/ca.pem | base64 | tr -d '\n')
+    CA_BUNDLE=$(cat ${K8SFS_CONF_DIR}/ssl/ca.pem | base64 | tr -d '\n')
     cat <<EOF | kubectl apply -f -
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -171,20 +183,20 @@ webhooks:
 EOF
 
     services-webhook \
-      -tlsCertFile /etc/kubernetes/ssl/kubernetes.pem \
-      -tlsKeyFile /etc/kubernetes/ssl/kubernetes-key.pem \
-      &> /var/log/kubernetes/services-webhook.log &
+      -tlsCertFile ${K8SFS_CONF_DIR}/ssl/kubernetes.pem \
+      -tlsKeyFile ${K8SFS_CONF_DIR}/ssl/kubernetes-key.pem \
+      &> ${K8SFS_LOG_DIR}/services-webhook.log &
 fi
 
 # Start the random scheduler
 if [ "$K8SFS_RANDOM_SCHEDULER" == "1" ]; then
     random-scheduler \
-      &> /var/log/kubernetes/random-scheduler.log &
+      &> ${K8SFS_LOG_DIR}/random-scheduler.log &
 fi
 
 # Start the Virtual Kubelet
 if [ "$K8SFS_MOCK_KUBELET" == "1" ]; then
-    cat > /etc/kubernetes/mock-config.json <<EOF
+    cat > ${K8SFS_CONF_DIR}/mock-config.json <<EOF
 {
     "worker": {
         "cpu": "2",
@@ -195,16 +207,16 @@ if [ "$K8SFS_MOCK_KUBELET" == "1" ]; then
 EOF
 
     # XXX Should adjust permissions to use worker credentials...
-    export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
-    export APISERVER_KEY_LOCATION=/etc/kubernetes/ssl/admin-key.pem
-    export APISERVER_CERT_LOCATION=/etc/kubernetes/ssl/admin.pem
+    export KUBECONFIG=${K8SFS_CONF_DIR}/admin.kubeconfig
+    export APISERVER_KEY_LOCATION=${K8SFS_CONF_DIR}/ssl/admin-key.pem
+    export APISERVER_CERT_LOCATION=${K8SFS_CONF_DIR}/ssl/admin.pem
 
     virtual-kubelet \
       --disable-taint \
       --nodename worker \
       --provider mock \
-      --provider-config /etc/kubernetes/mock-config.json \
-      &> /var/log/kubernetes/virtual-kubelet.log &
+      --provider-config ${K8SFS_CONF_DIR}/mock-config.json \
+      &> ${K8SFS_LOG_DIR}/virtual-kubelet.log &
 fi
 
 # Done

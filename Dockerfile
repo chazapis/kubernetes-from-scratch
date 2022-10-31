@@ -53,11 +53,11 @@ COPY --from=builder /go/src/services-webhook/services-webhook /usr/local/bin/
 COPY --from=builder /go/src/random-scheduler/random-scheduler /usr/local/bin/
 COPY --from=builder /go/src/virtual-kubelet/bin/virtual-kubelet /usr/local/bin/
 
-COPY start.sh /root/
-COPY cfssl /root/cfssl
+COPY cfssl /var/local/kubernetes/cfssl
+COPY start-kubernetes.sh /usr/local/bin/
 
 ENV K8SFS_HEADLESS_SERVICES=1
 ENV K8SFS_RANDOM_SCHEDULER=1
 ENV K8SFS_MOCK_KUBELET=1
 
-CMD ./start.sh
+CMD /usr/local/bin/start-kubernetes.sh
