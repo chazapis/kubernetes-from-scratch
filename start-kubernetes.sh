@@ -22,7 +22,7 @@ K8SFS_LOG_DIR=/var/log/k8sfs
 # Generate necessary keys
 export IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
 (cd ${K8SFS_CFSSL_DIR} && ./generate.sh)
-mkdir -p ${K8SFS_CONF_DIR}/kubernetes/kubernetes/ssl
+mkdir -p ${K8SFS_CONF_DIR}/kubernetes/ssl
 (cd ${K8SFS_CFSSL_DIR} && \
   mv *.pem ${K8SFS_CONF_DIR}/kubernetes/ssl/ && \
   mv *.kubeconfig ${K8SFS_CONF_DIR}/kubernetes/ && \
