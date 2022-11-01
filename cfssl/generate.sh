@@ -9,6 +9,8 @@
 
 # Provisioning a CA and Generating TLS Certificates
 
+if [ -z "$IP_ADDRESS" ]; then echo "Empty IP_ADDRESS"; exit 1; fi
+
 cfssl gencert -initca ca-csr.json | cfssljson -bare ca
 
 cfssl gencert \
@@ -34,11 +36,13 @@ cfssl gencert \
   kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
 
 KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+KUBERNETES_PUBLIC_ADDRESS=${IP_ADDRESS}
+
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=127.0.0.1,${KUBERNETES_HOSTNAMES} \
+  -hostname=127.0.0.1,${KUBERNETES_PUBLIC_ADDRESS},${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 
@@ -52,7 +56,6 @@ cfssl gencert \
 # Generating Kubernetes Configuration Files for Authentication
 
 KUBERNETES_CLUSTER_NAME=kubernetes-local
-KUBERNETES_PUBLIC_ADDRESS=${IP_ADDRESS:-127.0.0.1}
 
 kubectl config set-cluster ${KUBERNETES_CLUSTER_NAME} \
   --certificate-authority=ca.pem \
@@ -89,7 +92,7 @@ kubectl config use-context default --kubeconfig=kube-controller-manager.kubeconf
 kubectl config set-cluster ${KUBERNETES_CLUSTER_NAME} \
   --certificate-authority=ca.pem \
   --embed-certs=true \
-  --server=https://127.0.0.1:6443 \
+  --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
   --kubeconfig=admin.kubeconfig
 kubectl config set-credentials admin \
   --client-certificate=admin.pem \
