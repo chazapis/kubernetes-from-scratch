@@ -89,6 +89,8 @@ kube-controller-manager \
   --cluster-name=kubernetes \
   --cluster-signing-cert-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
   --cluster-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca-key.pem \
+  --controllers="*,bootstrapsigner,tokencleaner" \
+  --feature-gates="LegacyServiceAccountTokenNoAutoGeneration=false" \
   --kubeconfig=${K8SFS_CONF_DIR}/kubernetes/kube-controller-manager.kubeconfig \
   --root-ca-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
   --service-account-private-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/service-account-key.pem \
