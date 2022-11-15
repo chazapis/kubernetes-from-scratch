@@ -1,6 +1,6 @@
 # Kubernetes from scratch
 
-The purpose of this repository is to boostrap a very basic Kubernetes environment for experimenting with custom Kubernetes components, especially [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) implementations. Pre-built container images are [available](https://hub.docker.com/r/chazapis/kubernetes-from-scratch).
+The purpose of this repository is to boostrap a very basic Kubernetes environment for experimenting with custom Kubernetes components, especially [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) implementations. Pre-built container images for various architectures are [available](https://hub.docker.com/r/chazapis/kubernetes-from-scratch).
 
 Example usage:
 ```bash
@@ -16,9 +16,4 @@ kubectl version
 | `K8SFS_RANDOM_SCHEDULER`  | Start the random (pass-through) scheduler.       | `1`     |
 | `K8SFS_MOCK_KUBELET`      | Start the mock kubelet.                          | `1`     |
 
-To build and push for multiple architectures:
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 --push -t chazapis/kubernetes-from-scratch:<tag> .
-```
-
-Based on the excellent [Kubernetes The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) and [Kubernetes Deployment From Scratch - The Ultimate Guide](https://www.ulam.io/blog/kubernetes-scratch).
+Inspired by the excellent [Kubernetes The Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) and [Kubernetes Deployment From Scratch - The Ultimate Guide](https://www.ulam.io/blog/kubernetes-scratch).

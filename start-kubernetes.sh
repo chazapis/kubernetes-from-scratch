@@ -14,19 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-K8SFS_CFSSL_DIR=/var/local/cfssl
 K8SFS_CONF_DIR=/usr/local/etc
 K8SFS_DATA_DIR=/var/lib/etcd
 K8SFS_LOG_DIR=/var/log/k8sfs
 
 # Generate necessary keys
 export IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
-(cd ${K8SFS_CFSSL_DIR} && ./generate.sh)
-mkdir -p ${K8SFS_CONF_DIR}/kubernetes/ssl
-(cd ${K8SFS_CFSSL_DIR} && \
-  mv *.pem ${K8SFS_CONF_DIR}/kubernetes/ssl/ && \
-  mv *.kubeconfig ${K8SFS_CONF_DIR}/kubernetes/ && \
-  rm *.csr)
+mkdir -p ${K8SFS_CONF_DIR}/kubernetes/pki
+(cd ${K8SFS_CONF_DIR}/kubernetes/pki && \
+  generate-kubernetes-keys.sh && \
+  mv *.conf ${K8SFS_CONF_DIR}/kubernetes/)
 
 # Generate the data encryption config and key
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
@@ -50,9 +47,9 @@ mkdir -p ${K8SFS_DATA_DIR}
 chmod 700 ${K8SFS_DATA_DIR}
 mkdir -p ${K8SFS_LOG_DIR}
 etcd \
-  --cert-file=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes.pem \
-  --key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes-key.pem \
-  --trusted-ca-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
+  --cert-file=${K8SFS_CONF_DIR}/kubernetes/pki/etcd.crt \
+  --key-file=${K8SFS_CONF_DIR}/kubernetes/pki/etcd.key \
+  --trusted-ca-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
   --client-cert-auth \
   --listen-client-urls https://127.0.0.1:2379 \
   --advertise-client-urls https://127.0.0.1:2379 \
@@ -65,42 +62,42 @@ kube-apiserver \
   --allow-privileged=true \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
-  --client-ca-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
+  --client-ca-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
-  --etcd-cafile=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
-  --etcd-certfile=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes.pem \
-  --etcd-keyfile=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes-key.pem \
+  --etcd-cafile=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
+  --etcd-certfile=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
+  --etcd-keyfile=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.key \
   --etcd-servers=https://127.0.0.1:2379 \
   --encryption-provider-config=${K8SFS_CONF_DIR}/kubernetes/encryption-config.yaml \
-  --kubelet-certificate-authority=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
-  --kubelet-client-certificate=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes.pem \
-  --kubelet-client-key=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes-key.pem \
+  --kubelet-certificate-authority=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
+  --kubelet-client-certificate=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
+  --kubelet-client-key=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.key \
   --runtime-config='api/all=true' \
-  --service-account-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/service-account.pem \
-  --service-account-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/service-account-key.pem \
+  --service-account-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/sa.pub \
+  --service-account-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/sa.key \
   --service-account-issuer=https://${IP_ADDRESS}:6443 \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
-  --tls-cert-file=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes.pem \
-  --tls-private-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes-key.pem \
+  --tls-cert-file=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
+  --tls-private-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.key \
   &> ${K8SFS_LOG_DIR}/kube-apiserver.log &
 kube-controller-manager \
   --bind-address=0.0.0.0 \
   --cluster-name=kubernetes \
-  --cluster-signing-cert-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
-  --cluster-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca-key.pem \
+  --cluster-signing-cert-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
+  --cluster-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.key \
   --controllers="*,bootstrapsigner,tokencleaner" \
   --feature-gates="LegacyServiceAccountTokenNoAutoGeneration=false" \
-  --kubeconfig=${K8SFS_CONF_DIR}/kubernetes/kube-controller-manager.kubeconfig \
-  --root-ca-file=${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem \
-  --service-account-private-key-file=${K8SFS_CONF_DIR}/kubernetes/ssl/service-account-key.pem \
+  --kubeconfig=${K8SFS_CONF_DIR}/kubernetes/controller-manager.conf \
+  --root-ca-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
+  --service-account-private-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/sa.key \
   --service-cluster-ip-range=10.32.0.0/24 \
   --use-service-account-credentials=true \
   &> ${K8SFS_LOG_DIR}/kube-controller-manager.log &
 
 # Configure kubectl
 mkdir -p ~/.kube
-cp ${K8SFS_CONF_DIR}/kubernetes/admin.kubeconfig ~/.kube/config
+cp ${K8SFS_CONF_DIR}/kubernetes/admin.conf ~/.kube/config
 while ! kubectl version; do sleep 1; done
 
 # Deploy the DNS service
@@ -160,7 +157,7 @@ EOF
 
 # Start the services webhook
 if [ "$K8SFS_HEADLESS_SERVICES" == "1" ]; then
-    CA_BUNDLE=$(cat ${K8SFS_CONF_DIR}/kubernetes/ssl/ca.pem | base64 | tr -d '\n')
+    CA_BUNDLE=$(cat ${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt | base64 | tr -d '\n')
     cat <<EOF | kubectl apply -f -
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
@@ -184,8 +181,8 @@ webhooks:
 EOF
 
     services-webhook \
-      -tlsCertFile ${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes.pem \
-      -tlsKeyFile ${K8SFS_CONF_DIR}/kubernetes/ssl/kubernetes-key.pem \
+      -tlsCertFile ${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
+      -tlsKeyFile ${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.key \
       &> ${K8SFS_LOG_DIR}/services-webhook.log &
 fi
 
@@ -207,10 +204,9 @@ if [ "$K8SFS_MOCK_KUBELET" == "1" ]; then
 }
 EOF
 
-    # XXX Should adjust permissions to use worker credentials...
-    export KUBECONFIG=${K8SFS_CONF_DIR}/kubernetes/admin.kubeconfig
-    export APISERVER_KEY_LOCATION=${K8SFS_CONF_DIR}/kubernetes/ssl/admin-key.pem
-    export APISERVER_CERT_LOCATION=${K8SFS_CONF_DIR}/kubernetes/ssl/admin.pem
+    export KUBECONFIG=${K8SFS_CONF_DIR}/kubernetes/admin.conf
+    export APISERVER_KEY_LOCATION=${K8SFS_CONF_DIR}/kubernetes/pki/admin.key
+    export APISERVER_CERT_LOCATION=${K8SFS_CONF_DIR}/kubernetes/pki/admin.crt
 
     virtual-kubelet \
       --disable-taint \
