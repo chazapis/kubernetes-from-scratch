@@ -64,6 +64,7 @@ kube-apiserver \
   --bind-address=0.0.0.0 \
   --client-ca-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+  --feature-gates="LegacyServiceAccountTokenNoAutoGeneration=false" \
   --etcd-cafile=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
   --etcd-certfile=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
   --etcd-keyfile=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.key \
