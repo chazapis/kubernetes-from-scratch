@@ -29,7 +29,7 @@ WORKDIR /root
 ARG TARGETARCH
 
 ARG ETCD_VERSION=3.5.5
-RUN curl -LO https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz  && \
+RUN curl -LO https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz && \
     tar -zxvf etcd-v${ETCD_VERSION}-linux-${TARGETARCH}.tar.gz && \
     cp etcd-v${ETCD_VERSION}-linux-${TARGETARCH}/etcd /usr/local/bin/ && \
     cp etcd-v${ETCD_VERSION}-linux-${TARGETARCH}/etcdctl /usr/local/bin/ && \

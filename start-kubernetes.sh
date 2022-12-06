@@ -18,8 +18,9 @@ K8SFS_CONF_DIR=/usr/local/etc
 K8SFS_DATA_DIR=/var/lib/etcd
 K8SFS_LOG_DIR=/var/log/k8sfs
 
-# Generate necessary keys
 export IP_ADDRESS=`ip route get 1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
+
+# Generate necessary keys
 mkdir -p ${K8SFS_CONF_DIR}/kubernetes/pki
 (cd ${K8SFS_CONF_DIR}/kubernetes/pki && \
   generate-kubernetes-keys.sh && \
@@ -100,6 +101,9 @@ kube-controller-manager \
 mkdir -p ~/.kube
 cp ${K8SFS_CONF_DIR}/kubernetes/admin.conf ~/.kube/config
 while ! kubectl version; do sleep 1; done
+
+# Set permissions
+kubectl create clusterrolebinding cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
 
 # Deploy the DNS service
 mkdir -p ${K8SFS_CONF_DIR}/coredns
