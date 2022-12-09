@@ -55,7 +55,7 @@ func initInformers(clientset *kubernetes.Clientset, podQueue chan *v1.Pod, quit 
                 log.Println("This is not a node")
                 return
             }
-            log.Printf("New node added to store: %s", node.GetName())
+            log.Printf("New node added to store: %s\n", node.GetName())
         },
     })
 
@@ -109,7 +109,7 @@ func (s *Scheduler) run(quit chan struct{}) {
 
 func (s *Scheduler) scheduleOne() {
     p := <-s.podQueue
-    fmt.Println("Found a pod to schedule: %s/%s", p.Namespace, p.Name)
+    fmt.Printf("Found a pod to schedule: %s/%s\n", p.Namespace, p.Name)
 
     // Select a random node
     nodes, err := s.nodeLister.List(labels.Everything())
@@ -134,7 +134,7 @@ func (s *Scheduler) scheduleOne() {
         return
     }
 
-    fmt.Println(message)
+    fmt.Print(message)
 }
 
 func (s *Scheduler) bindPod(p *v1.Pod, node string) error {
