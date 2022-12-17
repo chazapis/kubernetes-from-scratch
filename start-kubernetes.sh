@@ -63,6 +63,7 @@ kube-apiserver \
   --allow-privileged=true \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
+  --secure-port=443 \
   --client-ca-file=${K8SFS_CONF_DIR}/kubernetes/pki/ca.crt \
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
   --feature-gates="LegacyServiceAccountTokenNoAutoGeneration=false" \
@@ -77,7 +78,7 @@ kube-apiserver \
   --runtime-config='api/all=true' \
   --service-account-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/sa.pub \
   --service-account-signing-key-file=${K8SFS_CONF_DIR}/kubernetes/pki/sa.key \
-  --service-account-issuer=https://${IP_ADDRESS}:6443 \
+  --service-account-issuer=https://${IP_ADDRESS}:443 \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=${K8SFS_CONF_DIR}/kubernetes/pki/apiserver.crt \
@@ -111,7 +112,7 @@ cat > ${K8SFS_CONF_DIR}/coredns/Corefile <<EOF
 .:53 {
     errors
     kubernetes cluster.local in-addr.arpa ip6.arpa {
-        endpoint 127.0.0.1:6443
+        endpoint 127.0.0.1:443
         kubeconfig /root/.kube/config
         pods insecure
         fallthrough in-addr.arpa ip6.arpa

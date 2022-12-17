@@ -4,8 +4,9 @@ The purpose of this repository is to boostrap a very basic Kubernetes environmen
 
 Example usage:
 ```bash
-docker run -d --rm -p 6443:6443 --name k8sfs chazapis/kubernetes-from-scratch:<tag>
+docker run -d --rm -p 443:6443 --name k8sfs chazapis/kubernetes-from-scratch:<tag>
 docker cp k8sfs:/root/.kube/config kubeconfig
+sed -i 's/server:.*/server: https:\/\/127.0.0.1:6443/' kubeconfig
 export KUBECONFIG=$PWD/kubeconfig
 kubectl version
 ```

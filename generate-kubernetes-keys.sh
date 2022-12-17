@@ -53,7 +53,7 @@ openssl req -x509 -key controller-manager.key -CA ca.crt -CAkey ca.key -days 365
 kubectl config set-cluster kubernetes \
   --certificate-authority=ca.crt \
   --embed-certs=true \
-  --server=https://127.0.0.1:6443 \
+  --server=https://127.0.0.1:443 \
   --kubeconfig=controller-manager.conf
 kubectl config set-context system:kube-controller-manager@kubernetes \
   --cluster=kubernetes \
@@ -77,7 +77,7 @@ openssl req -x509 -key admin.key -CA ca.crt -CAkey ca.key -days 365 -nodes -out 
 kubectl config set-cluster kubernetes \
   --certificate-authority=ca.crt \
   --embed-certs=true \
-  --server=https://${IP_ADDRESS}:6443 \
+  --server=https://${IP_ADDRESS}:443 \
   --kubeconfig=admin.conf
 kubectl config set-context kubernetes-admin@kubernetes \
   --cluster=kubernetes \
